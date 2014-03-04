@@ -5,10 +5,7 @@
  */
 package org.searchisko.api.model;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import org.searchisko.api.util.QuerySettingsParser;
 
@@ -23,25 +20,47 @@ public class QuerySettings {
 
 	public static class Filters {
 
-		public static final String CONTENT_TYPE_KEY = "type";
+		Map<String, List<String>> acknowledgedFilterCandidates = new HashMap<>();
+
+		/**
+		 * Return all values for all url parameters which are relevant to specific field name.
+		 * For example if there are two different filters defined for the same document field
+		 * then this method returns all values for both url params.
+		 *
+		 * @param fieldName
+		 * @return list of param values
+		 */
+		public List<String> valuesForField(String fieldName) {
+			return new ArrayList<>();
+		}
+
+		public void acknowledgeUrlFilterCandidate(String urlParamName, List<String> values) {
+			acknowledgedFilterCandidates.put(urlParamName, values);
+		}
+
+		public Set<String> getFilterCandidatesKeys() {
+			return acknowledgedFilterCandidates.keySet();
+		}
+
+//		public static final String CONTENT_TYPE_KEY = "type";
 
 		/**
 		 * Content Type Filtering - sys_content_type field
 		 */
 		private String contentType;
 
-		public static final String SYS_TYPES_KEY = "sys_type";
+//		public static final String SYS_TYPES_KEY = "sys_type";
 
 		/**
 		 * Type Filtering - sys_type field
 		 */
-		private List<String> sysTypes;
+//		private List<String> sysTypes;
 
-		public static final String SYS_CONTENT_PROVIDER = "content_provider";
+//		public static final String SYS_CONTENT_PROVIDER = "content_provider";
 
 		private String sysContentProvider;
 
-		public static final String PROJECTS_KEY = "project";
+//		public static final String PROJECTS_KEY = "project";
 
 		/**
 		 * Filtering based on project
@@ -53,24 +72,24 @@ public class QuerySettings {
 		 */
 		private List<String> tags = null;
 
-		public static final String TAGS_KEY = "tag";
+//		public static final String TAGS_KEY = "tag";
 
 		/**
 		 * Filtering based on contributors
 		 */
 		private List<String> contributors = null;
 
-		public static final String CONTRIBUTORS_KEY = "contributor";
+//		public static final String CONTRIBUTORS_KEY = "contributor";
 
 		/**
 		 * Filtering based on activity dates
 		 */
 		private PastIntervalValue activityDateInterval;
 
-		public static final String ACTIVITY_DATE_INTERVAL_KEY = "activity_date_interval";
+//		public static final String ACTIVITY_DATE_INTERVAL_KEY = "activity_date_interval";
 
-		public static final String ACTIVITY_DATE_FROM_KEY = "activity_date_from";
-		public static final String ACTIVITY_DATE_TO_KEY = "activity_date_to";
+//		public static final String ACTIVITY_DATE_FROM_KEY = "activity_date_from";
+//		public static final String ACTIVITY_DATE_TO_KEY = "activity_date_to";
 		private Long activityDateFrom;
 		private Long activityDateTo;
 
@@ -90,10 +109,11 @@ public class QuerySettings {
 
 		@Override
 		public String toString() {
-			return "Filters [contentType=" + contentType + ", sysTypes=" + sysTypes + ", sysContentProvider="
-					+ sysContentProvider + ", projects=" + projects + ", tags=" + tags + ", contributors=" + contributors
-					+ ", activityDateInterval=" + activityDateInterval + ", activityDateFrom=" + activityDateFrom
-					+ ", activityDateTo=" + activityDateTo + ", from=" + from + ", size=" + size + "]";
+			return "";
+//			return "Filters [contentType=" + contentType + ", sysTypes=" + sysTypes + ", sysContentProvider="
+//					+ sysContentProvider + ", projects=" + projects + ", tags=" + tags + ", contributors=" + contributors
+//					+ ", activityDateInterval=" + activityDateInterval + ", activityDateFrom=" + activityDateFrom
+//					+ ", activityDateTo=" + activityDateTo + ", from=" + from + ", size=" + size + "]";
 		}
 
 		public Long getActivityDateFrom() {
@@ -164,19 +184,19 @@ public class QuerySettings {
 			this.contentType = contentType;
 		}
 
-		public List<String> getSysTypes() {
-			return sysTypes;
-		}
+//		public List<String> getSysTypes() {
+//			return sysTypes;
+//		}
 
-		public void setSysTypes(List<String> sysTypes) {
-			this.sysTypes = sysTypes;
-		}
+//		public void setSysTypes(List<String> sysTypes) {
+//			this.sysTypes = sysTypes;
+//		}
 
-		public void addSysType(String sysType) {
-			if (sysTypes == null)
-				sysTypes = new ArrayList<String>();
-			sysTypes.add(sysType);
-		}
+//		public void addSysType(String sysType) {
+//			if (sysTypes == null)
+//				sysTypes = new ArrayList<String>();
+//			sysTypes.add(sysType);
+//		}
 
 		public String getSysContentProvider() {
 			return sysContentProvider;

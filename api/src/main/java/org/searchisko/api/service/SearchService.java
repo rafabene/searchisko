@@ -5,16 +5,7 @@
  */
 package org.searchisko.api.service;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -48,13 +39,16 @@ import org.searchisko.api.model.QuerySettings;
 import org.searchisko.api.model.QuerySettings.Filters;
 import org.searchisko.api.model.SortByValue;
 import org.searchisko.api.model.TimeoutConfiguration;
+import org.searchisko.api.rest.search.*;
+
+import static org.searchisko.api.rest.search.ConfigParseUtil.parseFacetType;
 
 /**
  * Search business logic service.
  * 
  * @author Libor Krzyzanek
  * @author Vlastimil Elias (velias at redhat dot com)
- * 
+ * @author Lukas Vlcek
  */
 @Named
 @ApplicationScoped
@@ -93,20 +87,20 @@ public class SearchService {
 		try {
 			SearchRequestBuilder srb = new SearchRequestBuilder(searchClientService.getClient());
 
-			handleSearchIndicesAndTypes(querySettings, srb);
+			setSearchRequestIndicesAndTypes(querySettings, srb);
 
-			QueryBuilder qb_fulltext = handleFulltextSearchSettings(querySettings);
-			Map<String, FilterBuilder> searchFilters = handleCommonFiltersSettings(querySettings);
+			QueryBuilder qb_fulltext = prepareQueryBuilder(querySettings);
+			Map<String, FilterBuilder> searchFilters = prepareFilters(querySettings);
 			srb.setQuery(applyCommonFilters(searchFilters, qb_fulltext));
 
-			searchFilters.put("fulltext_query", new QueryFilterBuilder(qb_fulltext));
+			searchFilters.put("fulltext_query", new QueryFilterBuilder(qb_fulltext)); // ??
 			handleFacetSettings(querySettings, searchFilters, srb);
 
-			handleSortingSettings(querySettings, srb);
+			setSearchRequestSort(querySettings, srb);
+			setSearchRequestHighlight(querySettings, srb);
+			setSearchRequestFields(querySettings, srb);
+			setSearchRequestFromSize(querySettings, srb);
 
-			handleHighlightSettings(querySettings, srb);
-
-			handleResponseContentSettings(querySettings, srb);
 			srb.setTimeout(TimeValue.timeValueSeconds(timeout.search()));
 
 			log.log(Level.FINE, "ElasticSearch Search request: {0}", srb);
@@ -123,58 +117,53 @@ public class SearchService {
 	}
 
 	/**
+	 * Setup indices and types for the search request builder according to query settings.
+	 *
 	 * @param querySettings
 	 * @param srb
 	 */
-	protected void handleSearchIndicesAndTypes(QuerySettings querySettings, SearchRequestBuilder srb) {
-		if (querySettings.getFilters() != null && querySettings.getFilters().getContentType() != null) {
-			String type = querySettings.getFilters().getContentType();
-			Map<String, Object> typeDef = providerService.findContentType(type);
-			if (typeDef == null) {
-				throw new IllegalArgumentException("type");
+	protected void setSearchRequestIndicesAndTypes(QuerySettings querySettings, SearchRequestBuilder srb) {
+
+		List<String> contentTypes = null;
+		if (querySettings.getFilters() != null) {
+			contentTypes = querySettings.getFilters().valuesForField(ContentObjectFields.SYS_CONTENT_TYPE);
+		}
+
+		if (contentTypes != null && contentTypes.size() > 0) {
+			List<String> allQueryIndices = new ArrayList<>();
+			List<String> allQueryTypes = new ArrayList<>();
+			for (String type : contentTypes) {
+				Map<String, Object> typeDef = providerService.findContentType(type);
+				if (typeDef == null) {
+					throw new IllegalArgumentException("type");
+				}
+				String[] queryIndices = ProviderService.extractSearchIndices(typeDef, type);
+				String queryType = ProviderService.extractIndexType(typeDef, type);
+				if (log.isLoggable(Level.FINE)) {
+					log.log(Level.FINE, "Query indices and types relevant to {0}: {1}", new Object[]{ContentObjectFields.SYS_CONTENT_TYPE, type});
+					log.log(Level.FINE, "Query indices: {0}", Arrays.asList(queryIndices).toString());
+					log.log(Level.FINE, "Query indices type: {0}", queryType);
+				}
+				Collections.addAll(allQueryIndices, queryIndices);
+				allQueryTypes.add(queryType);
 			}
-			String[] queryIndices = ProviderService.extractSearchIndices(typeDef, type);
-			String queryType = ProviderService.extractIndexType(typeDef, type);
-			srb.setIndices(queryIndices);
-			srb.setTypes(queryType);
-			if (log.isLoggable(Level.FINE)) {
-				log.log(Level.FINE, "Query indices: {0}", Arrays.asList(queryIndices).toString());
-				log.log(Level.FINE, "Query indices type: {0}", queryType);
-			}
+			// array parameters can contain duplicities, but we assume Elasticsearch handles it correctly
+			srb.setIndices((String[]) allQueryIndices.toArray());
+			srb.setTypes((String[]) allQueryTypes.toArray());
 		} else {
 			List<String> sysTypesRequested = null;
 			if (querySettings.getFilters() != null) {
-				sysTypesRequested = querySettings.getFilters().getSysTypes();
+				sysTypesRequested = querySettings.getFilters().valuesForField(ContentObjectFields.SYS_TYPE);
 			}
 			boolean isSysTypeFacet = (querySettings.getFacets() != null && querySettings.getFacets().contains(
 					getFacetNameUsingSysTypeField()));
 
-			Set<String> indexNames = indexNamesCache.get(prepareIndexNamesCacheKey(sysTypesRequested, isSysTypeFacet));
+			// TODO: optimization - prepareIndexNamesCacheKey has no side-effects, consider using Memoize pattern (for example Guava's CacheBuilder)
+			String indexNameCacheKey = prepareIndexNamesCacheKey(sysTypesRequested, isSysTypeFacet);
+			Set<String> indexNames = indexNamesCache.get(indexNameCacheKey);
 			if (indexNames == null) {
-				indexNames = new LinkedHashSet<String>();
-				List<Map<String, Object>> allProviders = providerService.getAll();
-				for (Map<String, Object> providerCfg : allProviders) {
-					try {
-						@SuppressWarnings("unchecked")
-						Map<String, Map<String, Object>> types = (Map<String, Map<String, Object>>) providerCfg
-								.get(ProviderService.TYPE);
-						if (types != null) {
-							for (String typeName : types.keySet()) {
-								Map<String, Object> typeDef = types.get(typeName);
-								if ((sysTypesRequested == null && !ProviderService.extractSearchAllExcluded(typeDef))
-										|| (sysTypesRequested != null && ((isSysTypeFacet && !ProviderService
-												.extractSearchAllExcluded(typeDef)) || sysTypesRequested.contains(ProviderService
-												.extractSysType(typeDef, typeName))))) {
-									indexNames.addAll(Arrays.asList(ProviderService.extractSearchIndices(typeDef, typeName)));
-								}
-							}
-						}
-					} catch (ClassCastException e) {
-						throw new SettingsException("Incorrect configuration of 'type' section for sys_provider="
-								+ providerCfg.get(ProviderService.NAME) + ". Contact administrators please.");
-					}
-				}
-				indexNamesCache.put(prepareIndexNamesCacheKey(sysTypesRequested, isSysTypeFacet), indexNames);
+				indexNames = prepareIndexNames(sysTypesRequested, isSysTypeFacet);
+				indexNamesCache.put(indexNameCacheKey, indexNames);
 			}
 			String[] queryIndices = indexNames.toArray(new String[indexNames.size()]);
 			srb.setIndices(queryIndices);
@@ -188,14 +177,15 @@ public class SearchService {
 	 * Prepare key for indexName cache.
 	 * 
 	 * @param sysTypesRequested to prepare key for
+	 * @param isSysTypeFacet
 	 * @return key value (never null)
 	 */
-	protected static String prepareIndexNamesCacheKey(List<String> sysTypesRequested, boolean isSysTypFacet) {
+	protected static String prepareIndexNamesCacheKey(List<String> sysTypesRequested, boolean isSysTypeFacet) {
 		if (sysTypesRequested == null || sysTypesRequested.isEmpty())
-			return "_all||" + isSysTypFacet;
+			return "_all||" + isSysTypeFacet;
 
 		if (sysTypesRequested.size() == 1) {
-			return sysTypesRequested.get(0) + "||" + isSysTypFacet;
+			return sysTypesRequested.get(0) + "||" + isSysTypeFacet;
 		}
 
 		TreeSet<String> ts = new TreeSet<String>(sysTypesRequested);
@@ -203,15 +193,48 @@ public class SearchService {
 		for (String k : ts) {
 			sb.append(k).append("|");
 		}
-		sb.append("|").append(isSysTypFacet);
+		sb.append("|").append(isSysTypeFacet);
 		return sb.toString();
 	}
 
+	private Set<String> prepareIndexNames(List<String> sysTypesRequested, boolean isSysTypeFacet) {
+		Set<String> indexNames = new LinkedHashSet<>();
+		List<Map<String, Object>> allProviders = providerService.getAll();
+		for (Map<String, Object> providerCfg : allProviders) {
+			try {
+				@SuppressWarnings("unchecked")
+				Map<String, Map<String, Object>> types = (Map<String, Map<String, Object>>) providerCfg
+						.get(ProviderService.TYPE);
+				if (types != null) {
+					for (String typeName : types.keySet()) {
+						Map<String, Object> typeDef = types.get(typeName);
+						if ((sysTypesRequested == null && !ProviderService.extractSearchAllExcluded(typeDef))
+								|| (sysTypesRequested != null && ((isSysTypeFacet && !ProviderService
+								.extractSearchAllExcluded(typeDef)) || sysTypesRequested.contains(ProviderService
+								.extractSysType(typeDef, typeName))))) {
+							indexNames.addAll(Arrays.asList(ProviderService.extractSearchIndices(typeDef, typeName)));
+						}
+					}
+				}
+			} catch (ClassCastException e) {
+				throw new SettingsException("Incorrect configuration of 'type' section for sys_provider="
+						+ providerCfg.get(ProviderService.NAME) + ". Contact administrators please.");
+			}
+		}
+		return indexNames;
+	}
+
 	/**
+	 * Prepare query builder based on query settings.
+	 *
+	 * Under the hood it creates either {@link org.elasticsearch.index.query.QueryStringQueryBuilder} using
+	 * fields configured in {@link ConfigService#CFGNAME_SEARCH_FULLTEXT_QUERY_FIELDS} config file
+	 * or {@link org.elasticsearch.index.query.MatchAllQueryBuilder} if query string is <code>null</code>.
+	 *
 	 * @param querySettings
-	 * @return builder for query, newer null
+	 * @return builder for query, never null
 	 */
-	protected QueryBuilder handleFulltextSearchSettings(QuerySettings querySettings) {
+	protected QueryBuilder prepareQueryBuilder(QuerySettings querySettings) {
 		if (querySettings.getQuery() != null) {
 			QueryStringQueryBuilder qb = QueryBuilders.queryString(querySettings.getQuery());
 			Map<String, Object> fields = configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_QUERY_FIELDS);
@@ -237,7 +260,12 @@ public class SearchService {
 		}
 	}
 
-	protected void handleHighlightSettings(QuerySettings querySettings, SearchRequestBuilder srb) {
+	/**
+	 * @param querySettings
+	 * @param srb
+	 * @see <a href="http://www.elasticsearch.org/guide/en/elasticsearch/reference/0.90/search-request-highlighting.html">Elasticsearch 0.90 - Highlighting</a>
+	 */
+	protected void setSearchRequestHighlight(QuerySettings querySettings, SearchRequestBuilder srb) {
 		if (querySettings.getQuery() != null && querySettings.isQueryHighlight()) {
 			Map<String, Object> hf = configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_HIGHLIGHT_FIELDS);
 			if (hf != null && !hf.isEmpty()) {
@@ -288,33 +316,102 @@ public class SearchService {
 
 	/**
 	 * @param querySettings
-	 * @return filter builder if some filters are here, null if not filters necessary
+	 * @return filter builders
 	 */
-	protected Map<String, FilterBuilder> handleCommonFiltersSettings(QuerySettings querySettings) {
+	protected Map<String, FilterBuilder> prepareFilters(QuerySettings querySettings) {
 		QuerySettings.Filters filters = querySettings.getFilters();
 		Map<String, FilterBuilder> searchFilters = new LinkedHashMap<String, FilterBuilder>();
 
 		if (filters != null) {
-			addFilter(searchFilters, ContentObjectFields.SYS_TYPE, filters.getSysTypes());
-			addFilter(searchFilters, ContentObjectFields.SYS_CONTENT_PROVIDER, filters.getSysContentProvider());
-			addFilter(searchFilters, ContentObjectFields.SYS_TAGS, filters.getTags());
-			addFilter(searchFilters, ContentObjectFields.SYS_PROJECT, filters.getProjects());
-			addFilter(searchFilters, ContentObjectFields.SYS_CONTRIBUTORS, filters.getContributors());
-			if (filters.getActivityDateInterval() != null) {
-				RangeFilterBuilder range = new RangeFilterBuilder(ContentObjectFields.SYS_ACTIVITY_DATES);
-				range.from(DATE_TIME_FORMATTER_UTC.print(filters.getActivityDateInterval().getFromTimestamp())).includeLower(
-						true);
-				searchFilters.put(ContentObjectFields.SYS_ACTIVITY_DATES, range);
-			} else if (filters.getActivityDateFrom() != null || filters.getActivityDateTo() != null) {
-				RangeFilterBuilder range = new RangeFilterBuilder(ContentObjectFields.SYS_ACTIVITY_DATES);
-				if (filters.getActivityDateFrom() != null) {
-					range.from(DATE_TIME_FORMATTER_UTC.print(filters.getActivityDateFrom())).includeLower(true);
+
+			Map<String, SemiParsedFilterConfig> semiParsedFilters = new LinkedHashMap<>();
+			Map<String, Object> filtersConfig = configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_FILTER_FIELDS);
+
+			// collect parsed filter configurations that are relevant to filters required by client
+			for (String filterCandidateKey : filters.getFilterCandidatesKeys()) {
+				if (filtersConfig.containsKey(filterCandidateKey)) {
+					// get filter types for filterCandidateKey and check all types are the same
+					Object filterConfig = filtersConfig.get(filterCandidateKey);
+					SemiParsedFilterConfig parsedFilterConfig = ConfigParseUtil.parseFilterType(filterConfig, filterCandidateKey);
+					semiParsedFilters.put(filterCandidateKey, parsedFilterConfig);
 				}
-				if (filters.getActivityDateTo() != null) {
-					range.to(DATE_TIME_FORMATTER_UTC.print(filters.getActivityDateTo())).includeUpper(true);
-				}
-				searchFilters.put(ContentObjectFields.SYS_ACTIVITY_DATES, range);
 			}
+
+			// iterate over all collected filters and drop those that are suppressed
+			for (String filterName : semiParsedFilters.keySet()) {
+				// parsed filters can be removed so we check if it is present first
+				if (semiParsedFilters.containsKey(filterName)) {
+					SemiParsedFilterConfig parsedFilterConfig = semiParsedFilters.get(filterName);
+					if (parsedFilterConfig instanceof SemiParsedRangeFilterConfig) {
+						List<String> suppressed = ((SemiParsedRangeFilterConfig)parsedFilterConfig).getSuppressed();
+						for (String suppress : suppressed) {
+							if (semiParsedFilters.containsKey(suppress)) {
+								semiParsedFilters.remove(suppress);
+							}
+						}
+					}
+				}
+			}
+
+			//
+			for (String filterName : semiParsedFilters.keySet()) {
+				SemiParsedFilterConfig filterConfig = semiParsedFilters.get(filterName);
+
+				// terms filter
+				if (filterConfig instanceof SemiParsedTermsFilterConfig) {
+					SemiParsedTermsFilterConfig conf = (SemiParsedTermsFilterConfig) filterConfig;
+					final List<String> filterValues = filters.valuesForField(conf.getFieldName());
+					// handle <_lowercase> if specified
+					if (conf.isLowercase()) {
+						for (int i = 0; i < filterValues.size(); i++) {
+							filterValues.set(i, filterValues.get(i).toLowerCase(Locale.ENGLISH));
+						}
+					}
+					TermsFilterBuilder tfb = new TermsFilterBuilder(conf.getFieldName(), filterValues)
+							.filterName(conf.getFilterName());
+					// TODO: handle <optional_settings>
+					searchFilters.put(conf.getFieldName(), tfb);
+
+				// range filter
+				} else if (filterConfig instanceof SemiParsedRangeFilterConfig) {
+					SemiParsedRangeFilterConfig conf = (SemiParsedRangeFilterConfig) filterConfig;
+
+					RangeFilterBuilder rfb = new RangeFilterBuilder(conf.getFieldName());
+					if (conf.getGte() != null) { }
+					if (conf.getLte() != null) { }
+
+					// handle <_enum> if specified
+					if (conf.getEnum() != null) {
+
+					}
+
+					searchFilters.put(conf.getFieldName(), rfb);
+
+				} else {
+					// unknown parsed type, ignore for now
+				}
+			}
+
+//			addFilter(searchFilters, ContentObjectFields.SYS_TYPE, filters.valuesForField(ContentObjectFields.SYS_TYPE));
+//			addFilter(searchFilters, ContentObjectFields.SYS_CONTENT_PROVIDER, filters.valuesForField(ContentObjectFields.SYS_CONTENT_PROVIDER));
+//			addFilter(searchFilters, ContentObjectFields.SYS_TAGS, filters.valuesForField(ContentObjectFields.SYS_TAGS));
+//			addFilter(searchFilters, ContentObjectFields.SYS_PROJECT, filters.valuesForField(ContentObjectFields.SYS_PROJECT));
+//			addFilter(searchFilters, ContentObjectFields.SYS_CONTRIBUTORS, filters.valuesForField(ContentObjectFields.SYS_CONTRIBUTORS));
+//			if (filters.getActivityDateInterval() != null) {
+//				RangeFilterBuilder range = new RangeFilterBuilder(ContentObjectFields.SYS_ACTIVITY_DATES);
+//					range.gte(DATE_TIME_FORMATTER_UTC.print(filters.getActivityDateInterval().getFromTimestamp())).includeLower(
+//						true);
+//				searchFilters.put(ContentObjectFields.SYS_ACTIVITY_DATES, range);
+//			} else if (filters.getActivityDateFrom() != null || filters.getActivityDateTo() != null) {
+//				RangeFilterBuilder range = new RangeFilterBuilder(ContentObjectFields.SYS_ACTIVITY_DATES);
+//				if (filters.getActivityDateFrom() != null) {
+//					range.gte(DATE_TIME_FORMATTER_UTC.print(filters.getActivityDateFrom())).includeLower(true);
+//				}
+//				if (filters.getActivityDateTo() != null) {
+//					range.lte(DATE_TIME_FORMATTER_UTC.print(filters.getActivityDateTo())).includeUpper(true);
+//				}
+//				searchFilters.put(ContentObjectFields.SYS_ACTIVITY_DATES, range);
+//			}
 		}
 		return searchFilters;
 	}
@@ -328,9 +425,10 @@ public class SearchService {
 		}
 	}
 
-	private void addFilter(Map<String, FilterBuilder> searchFilters, String filterField, List<String> filterValue) {
-		if (filterValue != null && !filterValue.isEmpty()) {
-			searchFilters.put(filterField, new TermsFilterBuilder(filterField, filterValue));
+	/*
+	private void addFilter(Map<String, FilterBuilder> searchFilters, String filterField, List<String> filterValues) {
+		if (filterValues != null && !filterValues.isEmpty()) {
+			searchFilters.put(filterField, new TermsFilterBuilder(filterField, filterValues));
 		}
 	}
 
@@ -339,6 +437,7 @@ public class SearchService {
 			searchFilters.put(filterField, new TermsFilterBuilder(filterField, filterValue));
 		}
 	}
+	*/
 
 	/**
 	 * @param querySettings
@@ -346,38 +445,35 @@ public class SearchService {
 	 */
 	protected void handleFacetSettings(QuerySettings querySettings, Map<String, FilterBuilder> searchFilters,
 			SearchRequestBuilder srb) {
-		// TODO: Optimize! We get and parse facet configuration multiple times in this code.
-		// We can cache parsed results for some time.
 		Map<String, Object> configuredFacets = configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_FACETS_FIELDS);
-		Set<String> facets = querySettings.getFacets();
-		if (configuredFacets != null && !configuredFacets.isEmpty() && facets != null && !facets.isEmpty()) {
-			for (String queryFacetName : facets) {
-				Object facetConfig = configuredFacets.get(queryFacetName);
+		Set<String> requestedFacets = querySettings.getFacets();
+		if (configuredFacets != null && !configuredFacets.isEmpty() && requestedFacets != null && !requestedFacets.isEmpty()) {
+			for (String requestedFacet: requestedFacets) {
+				Object facetConfig = configuredFacets.get(requestedFacet);
 				if (facetConfig != null) {
-					SemiParsedFacetConfig config = parseFacetType(facetConfig, queryFacetName);
-					if ("terms".equals(config.getFacetType())) {
+					SemiParsedFacetConfig parsedFacetConfig = parseFacetType(facetConfig, requestedFacet);
+					if ("terms".equals(parsedFacetConfig.getFacetType())) {
 						int size;
 						try {
-							size = (int) config.getOptionalSettings().get("size");
+							size = (int) parsedFacetConfig.getOptionalSettings().get("size");
 						} catch (Exception e) {
-							throw new SettingsException("Incorrect configuration of fulltext search facet field '" + queryFacetName
+							throw new SettingsException("Incorrect configuration of fulltext search facet field '" + requestedFacet
 									+ "' in configuration document " + ConfigService.CFGNAME_SEARCH_FULLTEXT_FACETS_FIELDS
 									+ ": Invalid value of [size] field.");
 						}
-						srb.addFacet(createTermsFacetBuilder(queryFacetName, config.getFieldName(), size, searchFilters));
-						if (searchFilters != null && searchFilters.containsKey(config.getFieldName())) {
-							if (config.isFiltered()) {
+						srb.addFacet(createTermsFacetBuilder(requestedFacet, parsedFacetConfig.getFieldName(), size, searchFilters));
+						if (searchFilters != null && searchFilters.containsKey(parsedFacetConfig.getFieldName())) {
+							if (parsedFacetConfig.isFiltered()) {
 								// we filter over contributors so we have to add second facet which provide numbers for these
-								// contributors
-								// because they can be out of normal facet due count limitation
-								TermsFacetBuilder tb = new TermsFacetBuilder(queryFacetName + "_filter").field(config.getFieldName())
-										.size(config.getFilteredSize()).global(true)
-										.facetFilter(new AndFilterBuilder(getFilters(searchFilters, null)));
+								// contributors because they can be out of normal facet due count limitation
+								TermsFacetBuilder tb = new TermsFacetBuilder(requestedFacet + "_filter").field(parsedFacetConfig.getFieldName())
+										.size(parsedFacetConfig.getFilteredSize()).global(true)
+										.facetFilter(new AndFilterBuilder(filtersMapToArray(searchFilters)));
 								srb.addFacet(tb);
 							}
 						}
-					} else if ("date_histogram".equals(config.getFacetType())) {
-						srb.addFacet(new DateHistogramFacetBuilder(queryFacetName).field(config.getFieldName()).interval(
+					} else if ("date_histogram".equals(parsedFacetConfig.getFacetType())) {
+						srb.addFacet(new DateHistogramFacetBuilder(requestedFacet).field(parsedFacetConfig.getFieldName()).interval(
 								selectActivityDatesHistogramInterval(querySettings)));
 					}
 				}
@@ -385,116 +481,8 @@ public class SearchService {
 		}
 	}
 
-	protected class SemiParsedFacetConfig {
-		private String facetName;
-		private String facetType;
-		private String fieldName;
-		private Map<String, Object> optionalSettings;
-		private boolean filtered = false;
-		private int filteredSize = 0;
-
-		public void setFacetName(String value) {
-			this.facetName = value;
-		}
-
-		public String getFacetName() {
-			return this.facetName;
-		}
-
-		public void setFacetType(String value) {
-			this.facetType = value;
-		}
-
-		public String getFacetType() {
-			return this.facetType;
-		}
-
-		public void setFieldName(String value) {
-			this.fieldName = value;
-		}
-
-		public String getFieldName() {
-			return this.fieldName;
-		}
-
-		public void setOptionalSettings(Map<String, Object> object) {
-			this.optionalSettings = object;
-		}
-
-		public Map<String, Object> getOptionalSettings() {
-			return this.optionalSettings;
-		}
-
-		public void setFiltered(boolean value) {
-			this.filtered = value;
-		}
-
-		public boolean isFiltered() {
-			return this.filtered;
-		}
-
-		public void setFilteredSize(int value) {
-			this.filteredSize = value;
-		}
-
-		public int getFilteredSize() {
-			return this.filteredSize;
-		}
-	}
-
 	/**
-	 * Parse facet type.
-	 * 
-	 * @param facetConfig
-	 * @param facetName
-	 * @return
-	 */
-	@SuppressWarnings("unchecked")
-	protected SemiParsedFacetConfig parseFacetType(final Object facetConfig, final String facetName) {
-		try {
-			Map<String, Object> map = (Map<String, Object>) facetConfig;
-			if (map.isEmpty() || (map.size() > 1 && !map.containsKey("_filtered"))
-					|| (map.size() > 2 && map.containsKey("_filtered"))) {
-				throw new SettingsException("Incorrect configuration of fulltext search facet field '" + facetName
-						+ "' in configuration document " + ConfigService.CFGNAME_SEARCH_FULLTEXT_FACETS_FIELDS
-						+ ": Multiple facet type is not allowed.");
-			}
-			SemiParsedFacetConfig config = new SemiParsedFacetConfig();
-			config.setFacetName(facetName);
-			for (String key : map.keySet()) {
-				if ("_filtered".equals(key)) {
-					Map<String, Object> filtered = (Map<String, Object>) map.get(key);
-					config.setFilteredSize((Integer) filtered.get("size"));
-					config.setFiltered(config.getFilteredSize() > 0 ? true : false);
-				} else {
-					config.setFacetType(key);
-				}
-			}
-			// get map one level deeper
-			map = (Map<String, Object>) map.get(config.getFacetType());
-			if (!map.containsKey("field") || map.isEmpty()) {
-				throw new SettingsException("Incorrect configuration of fulltext search facet field '" + facetName
-						+ "' in configuration document " + ConfigService.CFGNAME_SEARCH_FULLTEXT_FACETS_FIELDS
-						+ ": Missing required [field] field.");
-			}
-			String fieldName = (String) map.get("field");
-			if (fieldName == null || fieldName.isEmpty()) {
-				throw new SettingsException("Incorrect configuration of fulltext search facet field '" + facetName
-						+ "' in configuration document " + ConfigService.CFGNAME_SEARCH_FULLTEXT_FACETS_FIELDS
-						+ ": Invalid [field] field value.");
-			}
-			config.setFieldName(fieldName);
-			config.setOptionalSettings(map);
-			return config;
-		} catch (ClassCastException e) {
-			throw new SettingsException("Incorrect configuration of fulltext search facet field '" + facetName
-					+ "' in configuration document " + ConfigService.CFGNAME_SEARCH_FULLTEXT_FACETS_FIELDS + ".");
-		}
-	}
-
-	/**
-	 * Return (the first) name of fact that is built on top of "sys_type" field. TODO: Optimize! We get and parse facet
-	 * configuration multiple times in this code. We can cache parsed results for some time.
+	 * Return (the first) name of fact that is built on top of "sys_type" field.
 	 * 
 	 * @return (the first) name of fact that is built on top of "sys_type" field.
 	 */
@@ -515,8 +503,7 @@ public class SearchService {
 	}
 
 	/**
-	 * For given set of facet names it returns only those using "date_histogram" facet type. TODO: Optimize! We get and
-	 * parse facet configuration multiple times in this code. We can cache parsed results for some time.
+	 * For given set of facet names it returns only those using "date_histogram" facet type.
 	 * 
 	 * @param facetNames set of facet names to filter
 	 * @return only those facets names using "date_histogram" facet type
@@ -568,7 +555,7 @@ public class SearchService {
 
 		TermsFacetBuilder tb = new TermsFacetBuilder(facetName).field(facetField).size(size).global(true);
 		if (searchFilters != null && !searchFilters.isEmpty()) {
-			FilterBuilder[] fb = getFilters(searchFilters, facetField);
+			FilterBuilder[] fb = filtersMapToArrayExcluding(searchFilters, facetField);
 			if (fb != null && fb.length > 0)
 				tb.facetFilter(new AndFilterBuilder(fb));
 		}
@@ -616,7 +603,11 @@ public class SearchService {
 		return "month";
 	}
 
-	protected static FilterBuilder[] getFilters(Map<String, FilterBuilder> filters, String filterToExclude) {
+	protected static FilterBuilder[] filtersMapToArray(Map<String, FilterBuilder> filters) {
+		return filtersMapToArrayExcluding(filters, null);
+	}
+
+	protected static FilterBuilder[] filtersMapToArrayExcluding(Map<String, FilterBuilder> filters, String filterToExclude) {
 		List<FilterBuilder> builders = new ArrayList<>();
 		if (filters != null) {
 			for (String name : filters.keySet()) {
@@ -631,8 +622,9 @@ public class SearchService {
 	/**
 	 * @param querySettings
 	 * @param srb request builder to set sorting for
+	 * @see <a href="http://www.elasticsearch.org/guide/en/elasticsearch/reference/0.90/search-request-sort.html">Elasticsearch 0.90 - Sort</a>
 	 */
-	protected void handleSortingSettings(QuerySettings querySettings, SearchRequestBuilder srb) {
+	protected void setSearchRequestSort(QuerySettings querySettings, SearchRequestBuilder srb) {
 		if (querySettings.getSortBy() != null) {
 			if (querySettings.getSortBy().equals(SortByValue.NEW)) {
 				srb.addSort(ContentObjectFields.SYS_LAST_ACTIVITY_DATE, SortOrder.DESC);
@@ -647,9 +639,10 @@ public class SearchService {
 	/**
 	 * @param querySettings
 	 * @param srb request builder to set response content for
+	 * @see <a href="http://www.elasticsearch.org/guide/en/elasticsearch/reference/0.90/search-request-fields.html">Elasticsearch 0.90 - Fields</a>
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	protected void handleResponseContentSettings(QuerySettings querySettings, SearchRequestBuilder srb) {
+	protected void setSearchRequestFields(QuerySettings querySettings, SearchRequestBuilder srb) {
 
 		// handle 'field' params to return configured fields only. Use default set of fields loaded from configuration.
 		if (querySettings.getFields() != null) {
@@ -668,8 +661,14 @@ public class SearchService {
 				}
 			}
 		}
+	}
 
-		// paging of results
+	/**
+	 * @param querySettings
+	 * @param srb
+	 * @link <a href="http://www.elasticsearch.org/guide/en/elasticsearch/reference/0.90/search-request-from-size.html">Elasticsearch 0.90 - From/Size</a>
+	 */
+	protected void setSearchRequestFromSize(QuerySettings querySettings, SearchRequestBuilder srb) {
 		QuerySettings.Filters filters = querySettings.getFilters();
 		if (filters != null) {
 			if (filters.getFrom() != null && filters.getFrom() >= 0) {
