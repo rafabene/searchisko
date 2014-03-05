@@ -3,10 +3,9 @@ DCP configuration - configuration of fields which are allowed for filters
 
 **configuration API id:** `search_fulltext_filter_fields`
 
-Configuration of Elasticsearch [filters](http://www.elasticsearch.org/guide/en/elasticsearch/reference/0.90/query-dsl-filters.html) in Searchisko.
+This configuration enables Elasticsearch [filters](http://www.elasticsearch.org/guide/en/elasticsearch/reference/0.90/query-dsl-filters.html) in Searchisko.
 
-The following filter types are supported:
-
+The following filters are supported:
 
 ### Terms filter
 
