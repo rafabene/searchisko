@@ -23,25 +23,25 @@ public class QuerySettings {
 
 	public static class Filters {
 
-		public static final String CONTENT_TYPE_KEY = "type";
+//		public static final String CONTENT_TYPE_KEY = "type";
 
 		/**
 		 * Content Type Filtering - sys_content_type field
 		 */
 		private String contentType;
 
-		public static final String SYS_TYPES_KEY = "sys_type";
+//		public static final String SYS_TYPES_KEY = "sys_type";
 
 		/**
 		 * Type Filtering - sys_type field
 		 */
 		private List<String> sysTypes;
 
-		public static final String SYS_CONTENT_PROVIDER = "content_provider";
+//		public static final String SYS_CONTENT_PROVIDER = "content_provider";
 
 		private String sysContentProvider;
 
-		public static final String PROJECTS_KEY = "project";
+//		public static final String PROJECTS_KEY = "project";
 
 		/**
 		 * Filtering based on project
@@ -53,24 +53,24 @@ public class QuerySettings {
 		 */
 		private List<String> tags = null;
 
-		public static final String TAGS_KEY = "tag";
+//		public static final String TAGS_KEY = "tag";
 
 		/**
 		 * Filtering based on contributors
 		 */
 		private List<String> contributors = null;
 
-		public static final String CONTRIBUTORS_KEY = "contributor";
+//		public static final String CONTRIBUTORS_KEY = "contributor";
 
 		/**
 		 * Filtering based on activity dates
 		 */
 		private PastIntervalValue activityDateInterval;
 
-		public static final String ACTIVITY_DATE_INTERVAL_KEY = "activity_date_interval";
+//		public static final String ACTIVITY_DATE_INTERVAL_KEY = "activity_date_interval";
 
-		public static final String ACTIVITY_DATE_FROM_KEY = "activity_date_from";
-		public static final String ACTIVITY_DATE_TO_KEY = "activity_date_to";
+//		public static final String ACTIVITY_DATE_FROM_KEY = "activity_date_from";
+//		public static final String ACTIVITY_DATE_TO_KEY = "activity_date_to";
 		private Long activityDateFrom;
 		private Long activityDateTo;
 

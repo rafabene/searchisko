@@ -302,16 +302,16 @@ public class SearchService {
 			addFilter(searchFilters, ContentObjectFields.SYS_CONTRIBUTORS, filters.getContributors());
 			if (filters.getActivityDateInterval() != null) {
 				RangeFilterBuilder range = new RangeFilterBuilder(ContentObjectFields.SYS_ACTIVITY_DATES);
-				range.from(DATE_TIME_FORMATTER_UTC.print(filters.getActivityDateInterval().getFromTimestamp())).includeLower(
+					range.gte(DATE_TIME_FORMATTER_UTC.print(filters.getActivityDateInterval().getFromTimestamp())).includeLower(
 						true);
 				searchFilters.put(ContentObjectFields.SYS_ACTIVITY_DATES, range);
 			} else if (filters.getActivityDateFrom() != null || filters.getActivityDateTo() != null) {
 				RangeFilterBuilder range = new RangeFilterBuilder(ContentObjectFields.SYS_ACTIVITY_DATES);
 				if (filters.getActivityDateFrom() != null) {
-					range.from(DATE_TIME_FORMATTER_UTC.print(filters.getActivityDateFrom())).includeLower(true);
+					range.gte(DATE_TIME_FORMATTER_UTC.print(filters.getActivityDateFrom())).includeLower(true);
 				}
 				if (filters.getActivityDateTo() != null) {
-					range.to(DATE_TIME_FORMATTER_UTC.print(filters.getActivityDateTo())).includeUpper(true);
+					range.lte(DATE_TIME_FORMATTER_UTC.print(filters.getActivityDateTo())).includeUpper(true);
 				}
 				searchFilters.put(ContentObjectFields.SYS_ACTIVITY_DATES, range);
 			}
@@ -493,8 +493,9 @@ public class SearchService {
 	}
 
 	/**
-	 * Return (the first) name of fact that is built on top of "sys_type" field. TODO: Optimize! We get and parse facet
-	 * configuration multiple times in this code. We can cache parsed results for some time.
+	 * Return (the first) name of fact that is built on top of "sys_type" field.
+	 *
+	 * TODO: Optimize! We get and parse facet configuration multiple times in this code. We can cache parsed results for some time.
 	 * 
 	 * @return (the first) name of fact that is built on top of "sys_type" field.
 	 */
@@ -515,8 +516,9 @@ public class SearchService {
 	}
 
 	/**
-	 * For given set of facet names it returns only those using "date_histogram" facet type. TODO: Optimize! We get and
-	 * parse facet configuration multiple times in this code. We can cache parsed results for some time.
+	 * For given set of facet names it returns only those using "date_histogram" facet type.
+	 *
+	 * TODO: Optimize! We get and parse facet configuration multiple times in this code. We can cache parsed results for some time.
 	 * 
 	 * @param facetNames set of facet names to filter
 	 * @return only those facets names using "date_histogram" facet type

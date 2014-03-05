@@ -1,0 +1,31 @@
+{
+	"content_provider" : { "terms" : { "sys_content_provider" : [] }},
+	"type" : { "terms" : { "sys_content_type" : [] }},
+	"sys_type" : { "terms" : { "sys_type" : [] }},
+	"tag" : { "terms" : { "sys_tags" : [] }},
+	"project" : { "terms" : { "sys_project" : [] }},
+	"activity_date_from" : {
+		"range" : {
+			"sys_activity_dates" : {
+				"gte" : null
+			}
+		}
+	},
+	"activity_date_to" : {
+		"range" : {
+			"sys_activity_dates" : {
+				"lte" : null
+			}
+		}
+	},
+	"activity_date_interval" : {
+		"range" : {
+			"sys_activity_dates" : {
+				"gte" : null
+			}
+		},
+		"_replace" : ["activity_date_from", "activity_date_to"],
+		"_enum" : "org.searchisko.api.util.SearchUtils.PastIntervalValue"
+	},
+	"contributor" : { "terms" : { "sys_contributors" : [] }}
+}
