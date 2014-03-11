@@ -3,9 +3,9 @@ DCP configuration - configuration of fields which are allowed for filters
 
 **configuration API id:** `search_fulltext_filter_fields`
 
-This configuration enables Elasticsearch [filters](http://www.elasticsearch.org/guide/en/elasticsearch/reference/0.90/query-dsl-filters.html) in Searchisko.
+Configuration of Elasticsearch [filters](http://www.elasticsearch.org/guide/en/elasticsearch/reference/0.90/query-dsl-filters.html) in Searchisko.
 
-The following filters are supported:
+The following filter types are supported:
 
 
 ### Terms filter
@@ -21,7 +21,7 @@ Uses [Terms filter](http://www.elasticsearch.org/guide/en/elasticsearch/referenc
 
 ### Range filter
 
-Uses [Range filter](http://www.elasticsearch.org/guide/en/elasticsearch/reference/0.90/query-dsl-range-filter.html)
+Uses [Range filter](http://www.elasticsearch.org/guide/en/elasticsearch/reference/0.90/query-dsl-range-filter.html).
 
 	"<filter_name>" : {
 		"range" : {
@@ -31,7 +31,7 @@ Uses [Range filter](http://www.elasticsearch.org/guide/en/elasticsearch/referenc
 				<optional_settings>
 			}
 		},
-		"_replace" : [<filter_name>, <filter_name>, ...],
+		"_suppress" : [<filter_name>, <filter_name>, ...],
 		"_enum" : "<className>"
 	}
 
@@ -64,10 +64,10 @@ Note both `from` and `to` filters apply to **to same field name** `sys_activity_
 - If only one of `from` or `to` URL parameters are set by the user then appropriate range filter is instantiated accordingly using only `gte` or `lte` option respectively.
 - If, however, both URL parameters are present then again a single filter is instantiated but both upper and lower bounds are setup.
 
-#### \<_replace\>
+#### \<_suppress\>
 
-Allows to specify that this filter replaces listed filters. For example if filter B is configured to replace filter A
-then if both filters A and B are used by the client then filter A is dropped and only the filter B is used.
+Allows to specify that this filter suppress listed filters. For example if filter B is configured to suppress filter A
+then if both filters A and B are provided by the client then filter A is ignored and only the filter B is used.
 
 #### \<_enum\>
 
