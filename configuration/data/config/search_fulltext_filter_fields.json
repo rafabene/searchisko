@@ -2,7 +2,12 @@
 	"content_provider" : { "terms" : { "sys_content_provider" : [] }},
 	"type" : { "terms" : { "sys_content_type" : [] }},
 	"sys_type" : { "terms" : { "sys_type" : [] }},
-	"tag" : { "terms" : { "sys_tags" : [] }},
+	"tag" : {
+		"terms" : {
+			"sys_tags" : []
+		},
+		"_lowercase" : true
+	},
 	"project" : { "terms" : { "sys_project" : [] }},
 	"activity_date_from" : {
 		"range" : {

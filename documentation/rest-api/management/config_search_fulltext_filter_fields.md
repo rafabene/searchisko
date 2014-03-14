@@ -16,8 +16,18 @@ Uses [Terms filter](http://www.elasticsearch.org/guide/en/elasticsearch/referenc
 		"terms" : {
 			"<field_name>" : [],
 			<optional_settings>
-		}
+		},
+		"_lowercase" : <boolean>
 	}
+
+#### \<_lowercase\>
+
+By default terms used for [Terms filter] match are not analyzed. However, because we feed the field values in this
+filter directly from URL request parameters we allow to specify if those values should be lowercased before passing
+into the filter. This can be useful if the analysis for the field in the document uses
+[lowercase token filter](http://www.elasticsearch.org/guide/en/elasticsearch/reference/0.90/analysis-lowercase-tokenfilter.html).
+For lowercasing standard Java [String#toLowerCase()](http://docs.oracle.com/javase/7/docs/api/java/lang/String.html#toLowerCase())
+function is used (no ICU magic).
 
 ### Range filter
 
@@ -89,6 +99,12 @@ Put everything together:
 			"terms" : {
 				"sys_project" : []
 			}
+		},
+		"tag" : {
+			"terms" : {
+				"sys_tags" : []
+			},
+			"_lowercase" : true
 		},
 		"activity_date_from" : {
 			"range" : {
