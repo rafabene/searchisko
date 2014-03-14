@@ -5,10 +5,7 @@
  */
 package org.searchisko.api.model;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import org.searchisko.api.util.QuerySettingsParser;
 
@@ -23,6 +20,24 @@ public class QuerySettings {
 
 	public static class Filters {
 
+		Map<String, List<String>> acknowledgedFilterCandidates = new HashMap<>();
+
+		/**
+		 * Return all values for all url parameters which are relevant to specific field name.
+		 * For example if there are two different filters defined for the same document field
+		 * then this method returns all values for both url params.
+		 *
+		 * @param fieldName
+		 * @return list of param values
+		 */
+		public List<String> forField(String fieldName) {
+			return new ArrayList<>();
+		}
+
+		public void acknowledgeUrlFilterCandidate(String urlParamName, List<String> values) {
+			acknowledgedFilterCandidates.put(urlParamName, values);
+		}
+
 //		public static final String CONTENT_TYPE_KEY = "type";
 
 		/**
@@ -35,7 +50,7 @@ public class QuerySettings {
 		/**
 		 * Type Filtering - sys_type field
 		 */
-		private List<String> sysTypes;
+//		private List<String> sysTypes;
 
 //		public static final String SYS_CONTENT_PROVIDER = "content_provider";
 
@@ -90,10 +105,11 @@ public class QuerySettings {
 
 		@Override
 		public String toString() {
-			return "Filters [contentType=" + contentType + ", sysTypes=" + sysTypes + ", sysContentProvider="
-					+ sysContentProvider + ", projects=" + projects + ", tags=" + tags + ", contributors=" + contributors
-					+ ", activityDateInterval=" + activityDateInterval + ", activityDateFrom=" + activityDateFrom
-					+ ", activityDateTo=" + activityDateTo + ", from=" + from + ", size=" + size + "]";
+			return "";
+//			return "Filters [contentType=" + contentType + ", sysTypes=" + sysTypes + ", sysContentProvider="
+//					+ sysContentProvider + ", projects=" + projects + ", tags=" + tags + ", contributors=" + contributors
+//					+ ", activityDateInterval=" + activityDateInterval + ", activityDateFrom=" + activityDateFrom
+//					+ ", activityDateTo=" + activityDateTo + ", from=" + from + ", size=" + size + "]";
 		}
 
 		public Long getActivityDateFrom() {
@@ -164,19 +180,19 @@ public class QuerySettings {
 			this.contentType = contentType;
 		}
 
-		public List<String> getSysTypes() {
-			return sysTypes;
-		}
+//		public List<String> getSysTypes() {
+//			return sysTypes;
+//		}
 
-		public void setSysTypes(List<String> sysTypes) {
-			this.sysTypes = sysTypes;
-		}
+//		public void setSysTypes(List<String> sysTypes) {
+//			this.sysTypes = sysTypes;
+//		}
 
-		public void addSysType(String sysType) {
-			if (sysTypes == null)
-				sysTypes = new ArrayList<String>();
-			sysTypes.add(sysType);
-		}
+//		public void addSysType(String sysType) {
+//			if (sysTypes == null)
+//				sysTypes = new ArrayList<String>();
+//			sysTypes.add(sysType);
+//		}
 
 		public String getSysContentProvider() {
 			return sysContentProvider;

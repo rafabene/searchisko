@@ -69,6 +69,7 @@ public enum PastIntervalValue {
 			if (n.value.equals(requestVal))
 				return n;
 		}
-		throw new IllegalArgumentException(QuerySettings.Filters.ACTIVITY_DATE_INTERVAL_KEY);
+//		throw new IllegalArgumentException(QuerySettings.Filters.ACTIVITY_DATE_INTERVAL_KEY);
+		throw new IllegalArgumentException("na"); // TODO !
 	}
 }

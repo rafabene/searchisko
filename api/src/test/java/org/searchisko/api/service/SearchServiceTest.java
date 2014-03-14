@@ -116,7 +116,7 @@ public class SearchServiceTest {
 			Mockito.when(tested.indexNamesCache.get(Mockito.anyString())).thenReturn(null);
 			List<Map<String, Object>> mockedProvidersList = new ArrayList<Map<String, Object>>();
 			Mockito.when(tested.providerService.getAll()).thenReturn(mockedProvidersList);
-			tested.handleSearchIndicesAndTypes(querySettings, searchRequestBuilderMock);
+			tested.setSearchRequestIndicesAndTypes(querySettings, searchRequestBuilderMock);
 			Mockito.verify(tested.indexNamesCache).get("_all||false");
 			Mockito.verify(tested.providerService).getAll();
 			Mockito.verify(searchRequestBuilderMock).setIndices(new String[] {});
@@ -134,7 +134,7 @@ public class SearchServiceTest {
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_1.json"));
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_2.json"));
 			Mockito.when(tested.providerService.getAll()).thenReturn(mockedProvidersList);
-			tested.handleSearchIndicesAndTypes(querySettings, searchRequestBuilderMock);
+			tested.setSearchRequestIndicesAndTypes(querySettings, searchRequestBuilderMock);
 			Mockito.verify(tested.indexNamesCache).get("_all||false");
 			Mockito.verify(tested.providerService).getAll();
 			Mockito.verify(searchRequestBuilderMock).setIndices(
@@ -151,7 +151,7 @@ public class SearchServiceTest {
 			Mockito.when(tested.providerService.findContentType(testedType)).thenReturn(
 					((Map<String, Map<String, Object>>) TestUtils.loadJSONFromClasspathFile("/search/provider_1.json").get(
 							ProviderService.TYPE)).get(testedType));
-			tested.handleSearchIndicesAndTypes(querySettings, searchRequestBuilderMock);
+			tested.setSearchRequestIndicesAndTypes(querySettings, searchRequestBuilderMock);
 			Mockito.verifyZeroInteractions(tested.indexNamesCache);
 			Mockito.verify(searchRequestBuilderMock).setIndices(new String[] { "idx_provider1_issue" });
 			Mockito.verify(searchRequestBuilderMock).setTypes(new String[] { "t_provider1_issue" });
@@ -166,7 +166,7 @@ public class SearchServiceTest {
 			Mockito.when(tested.providerService.findContentType(testedType)).thenReturn(
 					((Map<String, Map<String, Object>>) TestUtils.loadJSONFromClasspathFile("/search/provider_1.json").get(
 							ProviderService.TYPE)).get(testedType));
-			tested.handleSearchIndicesAndTypes(querySettings, searchRequestBuilderMock);
+			tested.setSearchRequestIndicesAndTypes(querySettings, searchRequestBuilderMock);
 			Mockito.verifyZeroInteractions(tested.indexNamesCache);
 			Mockito.verify(searchRequestBuilderMock).setIndices(
 					new String[] { "idx_provider1_mailing1", "idx_provider1_mailing2" });
@@ -182,7 +182,7 @@ public class SearchServiceTest {
 			Mockito.when(tested.providerService.findContentType(testedType)).thenReturn(
 					((Map<String, Map<String, Object>>) TestUtils.loadJSONFromClasspathFile("/search/provider_1.json").get(
 							ProviderService.TYPE)).get(testedType));
-			tested.handleSearchIndicesAndTypes(querySettings, searchRequestBuilderMock);
+			tested.setSearchRequestIndicesAndTypes(querySettings, searchRequestBuilderMock);
 			Mockito.verifyZeroInteractions(tested.indexNamesCache);
 			Mockito.verify(searchRequestBuilderMock)
 					.setIndices(new String[] { "idx_provider1_cosi1", "idx_provider1_cosi2" });
@@ -202,7 +202,7 @@ public class SearchServiceTest {
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_1.json"));
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_2.json"));
 			Mockito.when(tested.providerService.getAll()).thenReturn(mockedProvidersList);
-			tested.handleSearchIndicesAndTypes(querySettings, searchRequestBuilderMock);
+			tested.setSearchRequestIndicesAndTypes(querySettings, searchRequestBuilderMock);
 			Mockito.verify(tested.indexNamesCache).get(SearchService.prepareIndexNamesCacheKey(sysTypesRequested, false));
 			Mockito.verify(tested.indexNamesCache).put(
 					Mockito.eq(SearchService.prepareIndexNamesCacheKey(sysTypesRequested, false)), Mockito.anySet());
@@ -223,7 +223,7 @@ public class SearchServiceTest {
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_1.json"));
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_2.json"));
 			Mockito.when(tested.providerService.getAll()).thenReturn(mockedProvidersList);
-			tested.handleSearchIndicesAndTypes(querySettings, searchRequestBuilderMock);
+			tested.setSearchRequestIndicesAndTypes(querySettings, searchRequestBuilderMock);
 			Mockito.verify(tested.indexNamesCache).get(SearchService.prepareIndexNamesCacheKey(sysTypesRequested, false));
 			Mockito.verify(tested.indexNamesCache).put(
 					Mockito.eq(SearchService.prepareIndexNamesCacheKey(sysTypesRequested, false)), Mockito.anySet());
@@ -244,7 +244,7 @@ public class SearchServiceTest {
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_1.json"));
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_2.json"));
 			Mockito.when(tested.providerService.getAll()).thenReturn(mockedProvidersList);
-			tested.handleSearchIndicesAndTypes(querySettings, searchRequestBuilderMock);
+			tested.setSearchRequestIndicesAndTypes(querySettings, searchRequestBuilderMock);
 			Mockito.verify(tested.indexNamesCache).get(SearchService.prepareIndexNamesCacheKey(sysTypesRequested, false));
 			Mockito.verify(tested.indexNamesCache).put(
 					Mockito.eq(SearchService.prepareIndexNamesCacheKey(sysTypesRequested, false)), Mockito.anySet());
@@ -268,7 +268,7 @@ public class SearchServiceTest {
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_1.json"));
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_2.json"));
 			Mockito.when(tested.providerService.getAll()).thenReturn(mockedProvidersList);
-			tested.handleSearchIndicesAndTypes(querySettings, searchRequestBuilderMock);
+			tested.setSearchRequestIndicesAndTypes(querySettings, searchRequestBuilderMock);
 			Mockito.verify(tested.indexNamesCache).get(SearchService.prepareIndexNamesCacheKey(sysTypesRequested, true));
 			Mockito.verify(tested.indexNamesCache).put(
 					Mockito.eq(SearchService.prepareIndexNamesCacheKey(sysTypesRequested, true)), Mockito.anySet());
@@ -293,7 +293,7 @@ public class SearchServiceTest {
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_1.json"));
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_2.json"));
 			Mockito.when(tested.providerService.getAll()).thenReturn(mockedProvidersList);
-			tested.handleSearchIndicesAndTypes(querySettings, searchRequestBuilderMock);
+			tested.setSearchRequestIndicesAndTypes(querySettings, searchRequestBuilderMock);
 			Mockito.verify(tested.indexNamesCache).get(SearchService.prepareIndexNamesCacheKey(sysTypesRequested, true));
 			Mockito.verify(tested.indexNamesCache).put(
 					Mockito.eq(SearchService.prepareIndexNamesCacheKey(sysTypesRequested, true)), Mockito.anySet());
@@ -321,7 +321,7 @@ public class SearchServiceTest {
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_1.json"));
 			mockedProvidersList.add(TestUtils.loadJSONFromClasspathFile("/search/provider_2.json"));
 			Mockito.when(tested.providerService.getAll()).thenReturn(mockedProvidersList);
-			tested.handleSearchIndicesAndTypes(querySettings, searchRequestBuilderMock);
+			tested.setSearchRequestIndicesAndTypes(querySettings, searchRequestBuilderMock);
 
 			Mockito.verify(tested.indexNamesCache).get(SearchService.prepareIndexNamesCacheKey(sysTypesRequested, false));
 			Mockito.verifyNoMoreInteractions(tested.indexNamesCache);
@@ -564,7 +564,7 @@ public class SearchServiceTest {
 
 		// case - NPE when no settings passed in
 		try {
-			tested.handleFulltextSearchSettings(null);
+			tested.prepareQueryBuilder(null);
 			Assert.fail("NullPointerException expected");
 		} catch (NullPointerException e) {
 			// OK
@@ -575,7 +575,7 @@ public class SearchServiceTest {
 		// case - no fulltext parameter requested
 		{
 			querySettings.setQuery(null);
-			QueryBuilder qbRes = tested.handleFulltextSearchSettings(querySettings);
+			QueryBuilder qbRes = tested.prepareQueryBuilder(querySettings);
 			TestUtils.assertJsonContentFromClasspathFile("/search/query_match_all.json", qbRes.toString());
 		}
 
@@ -584,7 +584,7 @@ public class SearchServiceTest {
 			Mockito.reset(tested.configService);
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_QUERY_FIELDS)).thenReturn(null);
 			querySettings.setQuery("my query string");
-			QueryBuilder qbRes = tested.handleFulltextSearchSettings(querySettings);
+			QueryBuilder qbRes = tested.prepareQueryBuilder(querySettings);
 			TestUtils.assertJsonContentFromClasspathFile("/search/query_fulltext.json", qbRes.toString());
 			Mockito.verify(tested.configService).get(ConfigService.CFGNAME_SEARCH_FULLTEXT_QUERY_FIELDS);
 			Mockito.verifyNoMoreInteractions(tested.configService);
@@ -596,7 +596,7 @@ public class SearchServiceTest {
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_QUERY_FIELDS)).thenReturn(
 					TestUtils.loadJSONFromClasspathFile("/search/search_fulltext_query_fields.json"));
 			querySettings.setQuery("my query string");
-			QueryBuilder qbRes = tested.handleFulltextSearchSettings(querySettings);
+			QueryBuilder qbRes = tested.prepareQueryBuilder(querySettings);
 			TestUtils.assertJsonContentFromClasspathFile("/search/query_fulltext_fields.json", qbRes.toString());
 			Mockito.verify(tested.configService).get(ConfigService.CFGNAME_SEARCH_FULLTEXT_QUERY_FIELDS);
 			Mockito.verifyNoMoreInteractions(tested.configService);
@@ -608,7 +608,7 @@ public class SearchServiceTest {
 			Mockito.reset(tested.configService);
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_QUERY_FIELDS)).thenReturn(
 					TestUtils.loadJSONFromClasspathFile("/search/search_fulltext_query_fields.json"));
-			QueryBuilder qbRes = tested.handleFulltextSearchSettings(querySettings);
+			QueryBuilder qbRes = tested.prepareQueryBuilder(querySettings);
 			TestUtils.assertJsonContentFromClasspathFile("/search/query_match_all.json", qbRes.toString());
 			Mockito.verifyZeroInteractions(tested.configService);
 		}
@@ -625,7 +625,7 @@ public class SearchServiceTest {
 
 		// case - NPE when no settings passed in
 		try {
-			tested.handleHighlightSettings(null, srbMock);
+			tested.setSearchRequestHighlight(null, srbMock);
 			Assert.fail("NullPointerException expected");
 		} catch (NullPointerException e) {
 			// OK
@@ -638,7 +638,7 @@ public class SearchServiceTest {
 			Mockito.reset(srbMock, tested.configService);
 			querySettings.setQuery(null);
 			querySettings.setQueryHighlight(true);
-			tested.handleHighlightSettings(querySettings, srbMock);
+			tested.setSearchRequestHighlight(querySettings, srbMock);
 			Mockito.verifyZeroInteractions(srbMock);
 			Mockito.verifyZeroInteractions(tested.configService);
 		}
@@ -648,7 +648,7 @@ public class SearchServiceTest {
 			Mockito.reset(srbMock, tested.configService);
 			querySettings.setQuery("query");
 			querySettings.setQueryHighlight(false);
-			tested.handleHighlightSettings(querySettings, srbMock);
+			tested.setSearchRequestHighlight(querySettings, srbMock);
 			Mockito.verifyZeroInteractions(srbMock);
 			Mockito.verifyZeroInteractions(tested.configService);
 		}
@@ -660,7 +660,7 @@ public class SearchServiceTest {
 			querySettings.setQueryHighlight(true);
 			Map<String, Object> cfg = TestUtils.loadJSONFromClasspathFile("/search/search_fulltext_highlight_fields.json");
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_HIGHLIGHT_FIELDS)).thenReturn(cfg);
-			tested.handleHighlightSettings(querySettings, srbMock);
+			tested.setSearchRequestHighlight(querySettings, srbMock);
 			Mockito.verify(srbMock).setHighlighterPreTags("<span class='hlt'>");
 			Mockito.verify(srbMock).setHighlighterPostTags("</span>");
 			Mockito.verify(srbMock).setHighlighterEncoder("html");
@@ -679,7 +679,7 @@ public class SearchServiceTest {
 			querySettings.setQueryHighlight(true);
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_HIGHLIGHT_FIELDS)).thenReturn(null);
 			try {
-				tested.handleHighlightSettings(querySettings, srbMock);
+				tested.setSearchRequestHighlight(querySettings, srbMock);
 				Assert.fail("SettingsException expected");
 			} catch (SettingsException e) {
 				// OK
@@ -692,7 +692,7 @@ public class SearchServiceTest {
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_HIGHLIGHT_FIELDS)).thenReturn(
 					new HashMap<String, Object>());
 			try {
-				tested.handleHighlightSettings(querySettings, srbMock);
+				tested.setSearchRequestHighlight(querySettings, srbMock);
 				Assert.fail("SettingsException expected");
 			} catch (SettingsException e) {
 				// OK
@@ -706,7 +706,7 @@ public class SearchServiceTest {
 			cfg.put("sys_title", "badclass");
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_HIGHLIGHT_FIELDS)).thenReturn(cfg);
 			try {
-				tested.handleHighlightSettings(querySettings, srbMock);
+				tested.setSearchRequestHighlight(querySettings, srbMock);
 				Assert.fail("SettingsException expected");
 			} catch (SettingsException e) {
 				// OK
@@ -722,7 +722,7 @@ public class SearchServiceTest {
 			c.put("fragment_size", "no integer");
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_HIGHLIGHT_FIELDS)).thenReturn(cfg);
 			try {
-				tested.handleHighlightSettings(querySettings, srbMock);
+				tested.setSearchRequestHighlight(querySettings, srbMock);
 				Assert.fail("SettingsException expected");
 			} catch (SettingsException e) {
 				// OK
@@ -738,7 +738,7 @@ public class SearchServiceTest {
 			c.put("number_of_fragments", "");
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_HIGHLIGHT_FIELDS)).thenReturn(cfg);
 			try {
-				tested.handleHighlightSettings(querySettings, srbMock);
+				tested.setSearchRequestHighlight(querySettings, srbMock);
 				Assert.fail("SettingsException expected");
 			} catch (SettingsException e) {
 				// OK
@@ -754,7 +754,7 @@ public class SearchServiceTest {
 			c.put("fragment_offset", "no integer");
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_HIGHLIGHT_FIELDS)).thenReturn(cfg);
 			try {
-				tested.handleHighlightSettings(querySettings, srbMock);
+				tested.setSearchRequestHighlight(querySettings, srbMock);
 				Assert.fail("SettingsException expected");
 			} catch (SettingsException e) {
 				// OK
@@ -772,7 +772,7 @@ public class SearchServiceTest {
 
 		// case - NPE when no settings passed in
 		try {
-			tested.handleResponseContentSettings(null, srbMock);
+			tested.setSearchRequestFromSize(null, srbMock);
 			Assert.fail("NullPointerException expected");
 		} catch (NullPointerException e) {
 			Mockito.verifyNoMoreInteractions(srbMock);
@@ -784,13 +784,13 @@ public class SearchServiceTest {
 			// no filters object
 			Mockito.reset(srbMock);
 			QuerySettings querySettings = new QuerySettings();
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFromSize(querySettings, srbMock);
 			Mockito.verifyNoMoreInteractions(srbMock);
 
 			// empty filters object
 			Mockito.reset(srbMock);
 			querySettings.setFilters(new Filters());
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFromSize(querySettings, srbMock);
 			Mockito.verifyNoMoreInteractions(srbMock);
 		}
 
@@ -800,7 +800,7 @@ public class SearchServiceTest {
 			QuerySettings querySettings = new QuerySettings();
 			querySettings.setFilters(new Filters());
 			querySettings.getFilters().setSize(124);
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFromSize(querySettings, srbMock);
 			Mockito.verify(srbMock).setSize(124);
 			Mockito.verifyNoMoreInteractions(srbMock);
 		}
@@ -811,7 +811,7 @@ public class SearchServiceTest {
 			QuerySettings querySettings = new QuerySettings();
 			querySettings.setFilters(new Filters());
 			querySettings.getFilters().setSize(SearchService.RESPONSE_MAX_SIZE + 10);
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFromSize(querySettings, srbMock);
 			Mockito.verify(srbMock).setSize(SearchService.RESPONSE_MAX_SIZE);
 			Mockito.verifyNoMoreInteractions(srbMock);
 		}
@@ -822,7 +822,7 @@ public class SearchServiceTest {
 			QuerySettings querySettings = new QuerySettings();
 			querySettings.setFilters(new Filters());
 			querySettings.getFilters().setSize(0);
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFromSize(querySettings, srbMock);
 			Mockito.verify(srbMock).setSize(0);
 			Mockito.verifyNoMoreInteractions(srbMock);
 		}
@@ -833,7 +833,7 @@ public class SearchServiceTest {
 			QuerySettings querySettings = new QuerySettings();
 			querySettings.setFilters(new Filters());
 			querySettings.getFilters().setSize(-1);
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFromSize(querySettings, srbMock);
 			Mockito.verifyNoMoreInteractions(srbMock);
 		}
 
@@ -843,7 +843,7 @@ public class SearchServiceTest {
 			QuerySettings querySettings = new QuerySettings();
 			querySettings.setFilters(new Filters());
 			querySettings.getFilters().setFrom(42);
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFromSize(querySettings, srbMock);
 			Mockito.verify(srbMock).setFrom(42);
 			Mockito.verifyNoMoreInteractions(srbMock);
 		}
@@ -854,7 +854,7 @@ public class SearchServiceTest {
 			QuerySettings querySettings = new QuerySettings();
 			querySettings.setFilters(new Filters());
 			querySettings.getFilters().setFrom(0);
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFromSize(querySettings, srbMock);
 			Mockito.verify(srbMock).setFrom(0);
 			Mockito.verifyNoMoreInteractions(srbMock);
 		}
@@ -865,7 +865,7 @@ public class SearchServiceTest {
 			QuerySettings querySettings = new QuerySettings();
 			querySettings.setFilters(new Filters());
 			querySettings.getFilters().setFrom(-1);
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFromSize(querySettings, srbMock);
 			Mockito.verifyNoMoreInteractions(srbMock);
 		}
 
@@ -876,7 +876,7 @@ public class SearchServiceTest {
 			querySettings.setFilters(new Filters());
 			querySettings.getFilters().setSize(124);
 			querySettings.getFilters().setFrom(42);
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFromSize(querySettings, srbMock);
 			Mockito.verify(srbMock).setSize(124);
 			Mockito.verify(srbMock).setFrom(42);
 			Mockito.verifyNoMoreInteractions(srbMock);
@@ -893,7 +893,7 @@ public class SearchServiceTest {
 
 		// case - NPE when no settings passed in
 		try {
-			tested.handleResponseContentSettings(null, srbMock);
+			tested.setSearchRequestFields(null, srbMock);
 			Assert.fail("NullPointerException expected");
 		} catch (NullPointerException e) {
 			Mockito.verifyNoMoreInteractions(srbMock);
@@ -905,7 +905,7 @@ public class SearchServiceTest {
 			Mockito.reset(srbMock, tested.configService);
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_RESPONSE_FIELDS)).thenReturn(null);
 			QuerySettings querySettings = new QuerySettings();
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFields(querySettings, srbMock);
 			Mockito.verify(tested.configService).get(ConfigService.CFGNAME_SEARCH_RESPONSE_FIELDS);
 			Mockito.verifyNoMoreInteractions(srbMock);
 			Mockito.verifyNoMoreInteractions(tested.configService);
@@ -918,7 +918,7 @@ public class SearchServiceTest {
 			Map<String, Object> mockConfig = new HashMap<String, Object>();
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_RESPONSE_FIELDS)).thenReturn(mockConfig);
 			QuerySettings querySettings = new QuerySettings();
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFields(querySettings, srbMock);
 			Mockito.verify(tested.configService).get(ConfigService.CFGNAME_SEARCH_RESPONSE_FIELDS);
 			Mockito.verifyNoMoreInteractions(srbMock);
 			Mockito.verifyNoMoreInteractions(tested.configService);
@@ -932,7 +932,7 @@ public class SearchServiceTest {
 			mockConfig.put(ConfigService.CFGNAME_SEARCH_RESPONSE_FIELDS, "aa");
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_RESPONSE_FIELDS)).thenReturn(mockConfig);
 			QuerySettings querySettings = new QuerySettings();
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFields(querySettings, srbMock);
 			Mockito.verify(tested.configService).get(ConfigService.CFGNAME_SEARCH_RESPONSE_FIELDS);
 			Mockito.verify(srbMock).addField("aa");
 			Mockito.verifyNoMoreInteractions(srbMock);
@@ -950,7 +950,7 @@ public class SearchServiceTest {
 			mockConfig.put(ConfigService.CFGNAME_SEARCH_RESPONSE_FIELDS, cfgList);
 			Mockito.when(tested.configService.get(ConfigService.CFGNAME_SEARCH_RESPONSE_FIELDS)).thenReturn(mockConfig);
 			QuerySettings querySettings = new QuerySettings();
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFields(querySettings, srbMock);
 			Mockito.verify(tested.configService).get(ConfigService.CFGNAME_SEARCH_RESPONSE_FIELDS);
 			Mockito.verify(srbMock).addFields(new String[] { "bb", "cc" });
 			Mockito.verifyNoMoreInteractions(srbMock);
@@ -963,7 +963,7 @@ public class SearchServiceTest {
 			QuerySettings querySettings = new QuerySettings();
 			querySettings.addField("aa");
 			querySettings.addField("bb");
-			tested.handleResponseContentSettings(querySettings, srbMock);
+			tested.setSearchRequestFields(querySettings, srbMock);
 			Mockito.verify(srbMock).addFields(new String[] { "aa", "bb" });
 			Mockito.verifyNoMoreInteractions(srbMock);
 			Mockito.verifyZeroInteractions(tested.configService);
@@ -979,7 +979,7 @@ public class SearchServiceTest {
 
 		// case - NPE when no settings passed in
 		try {
-			tested.handleSortingSettings(null, srbMock);
+			tested.setSearchRequestSort(null, srbMock);
 			Assert.fail("NullPointerException expected");
 		} catch (NullPointerException e) {
 			Mockito.verifyNoMoreInteractions(srbMock);
@@ -990,7 +990,7 @@ public class SearchServiceTest {
 		{
 			Mockito.reset(srbMock);
 			QuerySettings querySettings = new QuerySettings();
-			tested.handleSortingSettings(querySettings, srbMock);
+			tested.setSearchRequestSort(querySettings, srbMock);
 			Mockito.verifyNoMoreInteractions(srbMock);
 		}
 
@@ -999,14 +999,14 @@ public class SearchServiceTest {
 			Mockito.reset(srbMock);
 			QuerySettings querySettings = new QuerySettings();
 			querySettings.setSortBy(SortByValue.SCORE);
-			tested.handleSortingSettings(querySettings, srbMock);
+			tested.setSearchRequestSort(querySettings, srbMock);
 			Mockito.verifyNoMoreInteractions(srbMock);
 		}
 		{
 			Mockito.reset(srbMock);
 			QuerySettings querySettings = new QuerySettings();
 			querySettings.setSortBy(SortByValue.NEW);
-			tested.handleSortingSettings(querySettings, srbMock);
+			tested.setSearchRequestSort(querySettings, srbMock);
 			Mockito.verify(srbMock).addSort("sys_last_activity_date", SortOrder.DESC);
 			Mockito.verifyNoMoreInteractions(srbMock);
 		}
@@ -1014,7 +1014,7 @@ public class SearchServiceTest {
 			Mockito.reset(srbMock);
 			QuerySettings querySettings = new QuerySettings();
 			querySettings.setSortBy(SortByValue.OLD);
-			tested.handleSortingSettings(querySettings, srbMock);
+			tested.setSearchRequestSort(querySettings, srbMock);
 			Mockito.verify(srbMock).addSort("sys_last_activity_date", SortOrder.ASC);
 			Mockito.verifyNoMoreInteractions(srbMock);
 		}
@@ -1022,7 +1022,7 @@ public class SearchServiceTest {
 			Mockito.reset(srbMock);
 			QuerySettings querySettings = new QuerySettings();
 			querySettings.setSortBy(SortByValue.NEW_CREATION);
-			tested.handleSortingSettings(querySettings, srbMock);
+			tested.setSearchRequestSort(querySettings, srbMock);
 			Mockito.verify(srbMock).addSort("sys_created", SortOrder.DESC);
 			Mockito.verifyNoMoreInteractions(srbMock);
 		}
@@ -1031,12 +1031,12 @@ public class SearchServiceTest {
 	@Test
 	public void getFilters() {
 		{
-			FilterBuilder[] ret = SearchService.getFilters(null, null);
+			FilterBuilder[] ret = SearchService.filtersMapToArrayExcluding(null, null);
 			Assert.assertNotNull(ret);
 			Assert.assertEquals(0, ret.length);
 		}
 		{
-			FilterBuilder[] ret = SearchService.getFilters(null, "aaa");
+			FilterBuilder[] ret = SearchService.filtersMapToArrayExcluding(null, "aaa");
 			Assert.assertNotNull(ret);
 			Assert.assertEquals(0, ret.length);
 		}
@@ -1049,7 +1049,7 @@ public class SearchServiceTest {
 		FilterBuilder fb3 = Mockito.mock(FilterBuilder.class);
 		filters.put("f3", fb3);
 		{
-			FilterBuilder[] ret = SearchService.getFilters(filters, null);
+			FilterBuilder[] ret = SearchService.filtersMapToArrayExcluding(filters, null);
 			Assert.assertNotNull(ret);
 			Assert.assertEquals(3, ret.length);
 			Assert.assertEquals(fb1, ret[0]);
@@ -1058,7 +1058,7 @@ public class SearchServiceTest {
 		}
 
 		{
-			FilterBuilder[] ret = SearchService.getFilters(filters, "f2");
+			FilterBuilder[] ret = SearchService.filtersMapToArrayExcluding(filters, "f2");
 			Assert.assertNotNull(ret);
 			Assert.assertEquals(2, ret.length);
 			Assert.assertEquals(fb1, ret[0]);
