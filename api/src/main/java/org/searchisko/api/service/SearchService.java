@@ -158,32 +158,12 @@ public class SearchService {
 			boolean isSysTypeFacet = (querySettings.getFacets() != null && querySettings.getFacets().contains(
 					getFacetNameUsingSysTypeField()));
 
-			Set<String> indexNames = indexNamesCache.get(prepareIndexNamesCacheKey(sysTypesRequested, isSysTypeFacet));
+			// TODO: optimization - prepareIndexNamesCacheKey has no side-effects, consider using Memoize pattern (for example Guava's CacheBuilder)
+			String indexNameCacheKey = prepareIndexNamesCacheKey(sysTypesRequested, isSysTypeFacet);
+			Set<String> indexNames = indexNamesCache.get(indexNameCacheKey);
 			if (indexNames == null) {
-				indexNames = new LinkedHashSet<String>();
-				List<Map<String, Object>> allProviders = providerService.getAll();
-				for (Map<String, Object> providerCfg : allProviders) {
-					try {
-						@SuppressWarnings("unchecked")
-						Map<String, Map<String, Object>> types = (Map<String, Map<String, Object>>) providerCfg
-								.get(ProviderService.TYPE);
-						if (types != null) {
-							for (String typeName : types.keySet()) {
-								Map<String, Object> typeDef = types.get(typeName);
-								if ((sysTypesRequested == null && !ProviderService.extractSearchAllExcluded(typeDef))
-										|| (sysTypesRequested != null && ((isSysTypeFacet && !ProviderService
-												.extractSearchAllExcluded(typeDef)) || sysTypesRequested.contains(ProviderService
-												.extractSysType(typeDef, typeName))))) {
-									indexNames.addAll(Arrays.asList(ProviderService.extractSearchIndices(typeDef, typeName)));
-								}
-							}
-						}
-					} catch (ClassCastException e) {
-						throw new SettingsException("Incorrect configuration of 'type' section for sys_provider="
-								+ providerCfg.get(ProviderService.NAME) + ". Contact administrators please.");
-					}
-				}
-				indexNamesCache.put(prepareIndexNamesCacheKey(sysTypesRequested, isSysTypeFacet), indexNames);
+				indexNames = prepareIndexNames(sysTypesRequested, isSysTypeFacet);
+				indexNamesCache.put(indexNameCacheKey, indexNames);
 			}
 			String[] queryIndices = indexNames.toArray(new String[indexNames.size()]);
 			srb.setIndices(queryIndices);
@@ -197,14 +177,15 @@ public class SearchService {
 	 * Prepare key for indexName cache.
 	 * 
 	 * @param sysTypesRequested to prepare key for
+	 * @param isSysTypeFacet
 	 * @return key value (never null)
 	 */
-	protected static String prepareIndexNamesCacheKey(List<String> sysTypesRequested, boolean isSysTypFacet) {
+	protected static String prepareIndexNamesCacheKey(List<String> sysTypesRequested, boolean isSysTypeFacet) {
 		if (sysTypesRequested == null || sysTypesRequested.isEmpty())
-			return "_all||" + isSysTypFacet;
+			return "_all||" + isSysTypeFacet;
 
 		if (sysTypesRequested.size() == 1) {
-			return sysTypesRequested.get(0) + "||" + isSysTypFacet;
+			return sysTypesRequested.get(0) + "||" + isSysTypeFacet;
 		}
 
 		TreeSet<String> ts = new TreeSet<String>(sysTypesRequested);
@@ -212,8 +193,35 @@ public class SearchService {
 		for (String k : ts) {
 			sb.append(k).append("|");
 		}
-		sb.append("|").append(isSysTypFacet);
+		sb.append("|").append(isSysTypeFacet);
 		return sb.toString();
+	}
+
+	private Set<String> prepareIndexNames(List<String> sysTypesRequested, boolean isSysTypeFacet) {
+		Set<String> indexNames = new LinkedHashSet<>();
+		List<Map<String, Object>> allProviders = providerService.getAll();
+		for (Map<String, Object> providerCfg : allProviders) {
+			try {
+				@SuppressWarnings("unchecked")
+				Map<String, Map<String, Object>> types = (Map<String, Map<String, Object>>) providerCfg
+						.get(ProviderService.TYPE);
+				if (types != null) {
+					for (String typeName : types.keySet()) {
+						Map<String, Object> typeDef = types.get(typeName);
+						if ((sysTypesRequested == null && !ProviderService.extractSearchAllExcluded(typeDef))
+								|| (sysTypesRequested != null && ((isSysTypeFacet && !ProviderService
+								.extractSearchAllExcluded(typeDef)) || sysTypesRequested.contains(ProviderService
+								.extractSysType(typeDef, typeName))))) {
+							indexNames.addAll(Arrays.asList(ProviderService.extractSearchIndices(typeDef, typeName)));
+						}
+					}
+				}
+			} catch (ClassCastException e) {
+				throw new SettingsException("Incorrect configuration of 'type' section for sys_provider="
+						+ providerCfg.get(ProviderService.NAME) + ". Contact administrators please.");
+			}
+		}
+		return indexNames;
 	}
 
 	/**
@@ -366,8 +374,6 @@ public class SearchService {
 	 */
 	protected void handleFacetSettings(QuerySettings querySettings, Map<String, FilterBuilder> searchFilters,
 			SearchRequestBuilder srb) {
-		// TODO: Optimize! We get and parse facet configuration multiple times in this code.
-		// We can cache parsed results for some time.
 		Map<String, Object> configuredFacets = configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_FACETS_FIELDS);
 		Set<String> requestedFacets = querySettings.getFacets();
 		if (configuredFacets != null && !configuredFacets.isEmpty() && requestedFacets != null && !requestedFacets.isEmpty()) {
@@ -406,8 +412,6 @@ public class SearchService {
 
 	/**
 	 * Return (the first) name of fact that is built on top of "sys_type" field.
-	 *
-	 * TODO: Optimize! We get and parse facet configuration multiple times in this code. We can cache parsed results for some time.
 	 * 
 	 * @return (the first) name of fact that is built on top of "sys_type" field.
 	 */
@@ -429,8 +433,6 @@ public class SearchService {
 
 	/**
 	 * For given set of facet names it returns only those using "date_histogram" facet type.
-	 *
-	 * TODO: Optimize! We get and parse facet configuration multiple times in this code. We can cache parsed results for some time.
 	 * 
 	 * @param facetNames set of facet names to filter
 	 * @return only those facets names using "date_histogram" facet type
