@@ -15,6 +15,44 @@ import java.util.Map;
  */
 public class ConfigParseUtil {
 
+	private static final String TERMS_FACET_TYPE = "terms";
+	private static final String RANGE_FACET_TYPE = "range";
+
+	/**
+	 * Parse filter type.
+	 *
+	 * @param filterConfig
+	 * @param filterName
+	 * @return
+	 */
+	public static SemiParsedFilterConfig parseFilterType(final Object filterConfig, final String filterName) {
+		try {
+			Map<String, Object> map = (Map<String, Object>) filterConfig;
+			if (map.isEmpty() || !(map.containsKey(TERMS_FACET_TYPE) || map.containsKey(RANGE_FACET_TYPE))) {
+				throw new SettingsException("Incorrect configuration of fulltext search filter field '" + filterName
+						+ "' in configuration document " + ConfigService.CFGNAME_SEARCH_FULLTEXT_FILTER_FIELDS
+						+ ": Supported type not found.");
+			}
+			SemiParsedFilterConfig config = new SemiParsedFilterConfig();
+			config.setFilterName(filterName);
+			if (map.containsKey(TERMS_FACET_TYPE) && !map.containsKey(RANGE_FACET_TYPE)) {
+				Map<String, Object> termsFacetConfig = (Map<String, Object>) map.get(TERMS_FACET_TYPE);
+				termsFacetConfig.get()
+				config.setFieldName();
+			} else if(map.containsKey(RANGE_FACET_TYPE) && !map.containsKey(TERMS_FACET_TYPE)) {
+				config.setFieldName();
+			} else {
+				throw new SettingsException("Incorrect configuration of fulltext search filter field '" + filterName
+						+ "' in configuration document " + ConfigService.CFGNAME_SEARCH_FULLTEXT_FILTER_FIELDS
+						+ ": Malformed type definition.");
+			}
+			return config;
+		} catch (ClassCastException e) {
+			throw new SettingsException("Incorrect configuration of fulltext search filter field '" + filterName
+					+ "' in configuration document " + ConfigService.CFGNAME_SEARCH_FULLTEXT_FILTER_FIELDS + ".");
+		}
+	}
+
 	/**
 	 * Parse facet type.
 	 *

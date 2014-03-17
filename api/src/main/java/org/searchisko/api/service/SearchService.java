@@ -39,7 +39,9 @@ import org.searchisko.api.model.QuerySettings;
 import org.searchisko.api.model.QuerySettings.Filters;
 import org.searchisko.api.model.SortByValue;
 import org.searchisko.api.model.TimeoutConfiguration;
+import org.searchisko.api.rest.search.ConfigParseUtil;
 import org.searchisko.api.rest.search.SemiParsedFacetConfig;
+import org.searchisko.api.rest.search.SemiParsedFilterConfig;
 
 import static org.searchisko.api.rest.search.ConfigParseUtil.parseFacetType;
 
@@ -126,7 +128,7 @@ public class SearchService {
 
 		List<String> contentTypes = null;
 		if (querySettings.getFilters() != null) {
-			contentTypes = querySettings.getFilters().forField(ContentObjectFields.SYS_CONTENT_TYPE);
+			contentTypes = querySettings.getFilters().valuesForField(ContentObjectFields.SYS_CONTENT_TYPE);
 		}
 
 		if (contentTypes != null && contentTypes.size() > 0) {
@@ -153,7 +155,7 @@ public class SearchService {
 		} else {
 			List<String> sysTypesRequested = null;
 			if (querySettings.getFilters() != null) {
-				sysTypesRequested = querySettings.getFilters().forField(ContentObjectFields.SYS_TYPE);
+				sysTypesRequested = querySettings.getFilters().valuesForField(ContentObjectFields.SYS_TYPE);
 			}
 			boolean isSysTypeFacet = (querySettings.getFacets() != null && querySettings.getFacets().contains(
 					getFacetNameUsingSysTypeField()));
@@ -323,11 +325,24 @@ public class SearchService {
 		Map<String, FilterBuilder> searchFilters = new LinkedHashMap<String, FilterBuilder>();
 
 		if (filters != null) {
-			addFilter(searchFilters, ContentObjectFields.SYS_TYPE, filters.forField(ContentObjectFields.SYS_TYPE));
-			addFilter(searchFilters, ContentObjectFields.SYS_CONTENT_PROVIDER, filters.forField(ContentObjectFields.SYS_CONTENT_PROVIDER));
-			addFilter(searchFilters, ContentObjectFields.SYS_TAGS, filters.getTags());
-			addFilter(searchFilters, ContentObjectFields.SYS_PROJECT, filters.getProjects());
-			addFilter(searchFilters, ContentObjectFields.SYS_CONTRIBUTORS, filters.getContributors());
+
+			Map<String, Object> filtersConfig = configService.get(ConfigService.CFGNAME_SEARCH_FULLTEXT_FILTER_FIELDS);
+			for (String filterCandidateKey : filters.getFilterCandidatesKeys()) {
+				if (filtersConfig.containsKey(filterCandidateKey)) {
+					// get filter types for filterCandidateKey and check all types are the same
+					Object filterConfig = filtersConfig.get(filterCandidateKey);
+					SemiParsedFilterConfig parsedFilterConfig = ConfigParseUtil.parseFilterType(filterConfig, filterCandidateKey);
+					// construct appropriate filter and set filters.valuesForField() values
+						// - use <_enum> or <_lowercase> if specified
+				}
+				// iterate over all created filters and remove those who are suppressed
+			}
+
+			addFilter(searchFilters, ContentObjectFields.SYS_TYPE, filters.valuesForField(ContentObjectFields.SYS_TYPE));
+			addFilter(searchFilters, ContentObjectFields.SYS_CONTENT_PROVIDER, filters.valuesForField(ContentObjectFields.SYS_CONTENT_PROVIDER));
+			addFilter(searchFilters, ContentObjectFields.SYS_TAGS, filters.valuesForField(ContentObjectFields.SYS_TAGS));
+			addFilter(searchFilters, ContentObjectFields.SYS_PROJECT, filters.valuesForField(ContentObjectFields.SYS_PROJECT));
+			addFilter(searchFilters, ContentObjectFields.SYS_CONTRIBUTORS, filters.valuesForField(ContentObjectFields.SYS_CONTRIBUTORS));
 			if (filters.getActivityDateInterval() != null) {
 				RangeFilterBuilder range = new RangeFilterBuilder(ContentObjectFields.SYS_ACTIVITY_DATES);
 					range.gte(DATE_TIME_FORMATTER_UTC.print(filters.getActivityDateInterval().getFromTimestamp())).includeLower(
@@ -356,9 +371,9 @@ public class SearchService {
 		}
 	}
 
-	private void addFilter(Map<String, FilterBuilder> searchFilters, String filterField, List<String> filterValue) {
-		if (filterValue != null && !filterValue.isEmpty()) {
-			searchFilters.put(filterField, new TermsFilterBuilder(filterField, filterValue));
+	private void addFilter(Map<String, FilterBuilder> searchFilters, String filterField, List<String> filterValues) {
+		if (filterValues != null && !filterValues.isEmpty()) {
+			searchFilters.put(filterField, new TermsFilterBuilder(filterField, filterValues));
 		}
 	}
 

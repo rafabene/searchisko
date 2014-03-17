@@ -30,12 +30,16 @@ public class QuerySettings {
 		 * @param fieldName
 		 * @return list of param values
 		 */
-		public List<String> forField(String fieldName) {
+		public List<String> valuesForField(String fieldName) {
 			return new ArrayList<>();
 		}
 
 		public void acknowledgeUrlFilterCandidate(String urlParamName, List<String> values) {
 			acknowledgedFilterCandidates.put(urlParamName, values);
+		}
+
+		public Set<String> getFilterCandidatesKeys() {
+			return acknowledgedFilterCandidates.keySet();
 		}
 
 //		public static final String CONTENT_TYPE_KEY = "type";
